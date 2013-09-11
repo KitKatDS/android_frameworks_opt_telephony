@@ -70,6 +70,7 @@ import java.util.TimeZone;
  */
 public class CdmaServiceStateTracker extends ServiceStateTracker {
     static final String LOG_TAG = "CdmaSST";
+    protected int mNewRilRadioTechnology = 0;
 
     CDMAPhone mPhone;
     CdmaCellLocation mCellLoc;
@@ -961,6 +962,18 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
     }
 
     protected void pollStateDone() {
+        // Some older CDMA RILs only report VoiceRadioTechnology which results in network
+        // Unknown. In these cases return RilVoiceRadioTechnology for RilDataRadioTechnology.
+        boolean oldRil = mCi.needsOldRilFeature("usevoicetechfordata");
+        if (mNewSS.getDataRegState() != ServiceState.STATE_IN_SERVICE && oldRil) {
+            // Get CDMA Service State
+            mNewRilRadioTechnology = mNewSS.getRilVoiceRadioTechnology();
+            mNewSS.setRilDataRadioTechnology(mNewRilRadioTechnology);
+            log("pollStateDone CDMA STATE_IN_SERVICE mNewRilRadioTechnology = " +
+                    mNewRilRadioTechnology + " mNewSS.getDataRegState() = " +
+                    mNewSS.getDataRegState());
+        }
+
         if (DBG) log("pollStateDone: cdma oldSS=[" + mSS + "] newSS=[" + mNewSS + "]");
 
         if (Build.IS_DEBUGGABLE && SystemProperties.getBoolean(PROP_FORCE_ROAMING, false)) {
